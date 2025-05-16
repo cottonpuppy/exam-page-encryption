@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员界面</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; display: flex; }
+
+        /* Sidebar */
+        .sidebar { width: 250px; background-color: #2c3e50; color: #fff; position: fixed; top: 0; bottom: 0; overflow-y: auto; }
+        .sidebar .logo { padding: 20px; text-align: center; font-size: 24px; background-color: #1a252f; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar ul li { padding: 15px 20px; cursor: pointer; }
+        .sidebar ul li:hover { background-color: #1a252f; }
+        .sidebar ul li i { margin-right: 10px; }
+
+        /* Main Content */
+        .main-content { margin-left: 250px; width: calc(100% - 250px); padding: 20px; }
+        #header { background-color: #3f51b5; color: #fff; padding: 20px; text-align: center; }
+        .header_title { font-size: 24px; }
+
+        /* User Table */
+        #content { padding: 20px; background: #fff; border-radius: 8px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #3f51b5; color: white; }
+        button { padding: 5px 10px; background-color: #3f51b5; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #303f9f; }
+        .error { color: red; margin-top: 10px; }
+        .success { color: green; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">管理员面板</div>
+        <ul>
+            <li><i class="fas fa-home"></i> 首页</li>
+            <li><i class="fas fa-user"></i> 用户管理</li>
+            <li><i class="fas fa-chart-line"></i> 数据分析</li>
+            <li><i class="fas fa-cog"></i> 设置</li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div id="header">
+            <div class="header_title">管理员界面</div>
+        </div>
+
+        <!-- User Management Section -->
+        <div id="content">
+            <h2>用户管理</h2>
+            <button onclick="loadUsers()">刷新数据</button>
+            <div id="error" class="error"></div>
+            <div id="success" class="success"></div>
+            <table id="userTable">
+                <tr>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>学院</th>
+                    <th>是否已授权</th>
+                    <th>操作</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function loadUsers() {
+            document.getElementById('error').textContent = "";
+            document.getElementById('success').textContent = "";
+
+            fetch('https://localhost:8888/admin/users', { credentials: 'include' })
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            throw new Error("没有权限查看用户数据");
+                        } else {
+                            throw new Error("加载用户数据失败");
+                        }
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const table = document.getElementById('userTable');
+                    table.innerHTML = `
+                        <tr>
+                            <th>用户名</th>
+                            <th>角色</th>
+                            <th>学院</th>
+                            <th>是否已授权</th>
+                            <th>操作</th>
+                        </tr>
+                    `;
+                    data.forEach(user => {
+                        const row = table.insertRow();
+                        row.insertCell(0).textContent = user.username;
+                        row.insertCell(1).textContent = user.role;
+                        row.insertCell(2).textContent = user.college;
+                        row.insertCell(3).textContent = user.is_authorized ? "是" : "否";
+                        const actionCell = row.insertCell(4);
+
+                        if (user.is_authorized) {
+                            const revokeButton = document.createElement('button');
+                            revokeButton.textContent = '取消授权';
+                            revokeButton.onclick = () => revokeAuthorization(user.username);
+                            actionCell.appendChild(revokeButton);
+                        } else {
+                            const authorizeButton = document.createElement('button');
+                            authorizeButton.textContent = '授权';
+                            authorizeButton.onclick = () => authorizeUser(user.username);
+                            actionCell.appendChild(authorizeButton);
+                        }
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = '删除';
+                        deleteButton.onclick = () => confirmDelete(user.username);
+                        actionCell.appendChild(deleteButton);
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('error').textContent = error.message;
+                    console.error("Error loading users:", error);
+                });
+        }
+
+        function authorizeUser(username) {
+            fetch(`https://localhost:8888/admin/users/${username}/authorize`, {
+                method: 'PUT',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("授权用户失败");
+                }
+                loadUsers();
+                document.getElementById('success').textContent = `用户 ${username} 已成功授权。`;
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = error.message;
+                console.error("Error authorizing user:", error);
+            });
+        }
+
+        function revokeAuthorization(username) {
+            fetch(`https://localhost:8888/admin/users/${username}/revoke`, {
+                method: 'PUT',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("取消授权失败");
+                }
+                loadUsers();
+                document.getElementById('success').textContent = `用户 ${username} 已成功取消授权。`;
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = error.message;
+                console.error("Error revoking authorization:", error);
+            });
+        }
+
+        function confirmDelete(username) {
+            const confirmAction = confirm(`确定要删除用户 ${username} 吗？`);
+            if (confirmAction) {
+                deleteUser(username);
+            }
+        }
+
+        function deleteUser(username) {
+            document.getElementById('error').textContent = "";
+            document.getElementById('success').textContent = "";
+
+            fetch(`https://localhost:8888/admin/users/${username}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("删除用户失败");
+                }
+                loadUsers();
+                document.getElementById('success').textContent = `用户 ${username} 已成功删除。`;
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = error.message;
+                console.error("Error deleting user:", error);
+            });
+        }
+
+        window.onload = function() {
+            loadUsers();
+        };
+    </script>
+
+    <!-- Font Awesome for Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+</body>
+</html>

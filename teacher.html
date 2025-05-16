@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师管理页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        #header {
+            background-color: #3f51b5;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header_title {
+            font-size: 24px;
+        }
+        #content {
+            padding: 20px;
+        }
+        .upload-section, .file-list-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .file-list-section table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .delete-btn {
+            background-color: #e53935;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #b71c1c;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="header_title">教师管理页面</div>
+    </div>
+
+    <div id="content">
+        <!-- 上传文件部分 -->
+        <div class="upload-section">
+            <h2>上传文件</h2>
+            <input type="file" id="fileInput" />
+            <button onclick="uploadFile()">上传</button>
+        </div>
+
+        <!-- 文件列表部分 -->
+        <div class="file-list-section">
+            <h2>文件列表</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>上传者</th>
+                        <th>上传时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList">
+                    <!-- 文件列表将动态添加 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://localhost:8888';
+
+        // 上传文件函数
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const timestamp = new Date().toLocaleString();
+
+            if (!file) {
+                alert('请选择一个文件上传');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('timestamp', timestamp);
+
+            fetch(`${API_URL}/upload`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('文件上传成功！');
+                    loadFileList();
+                } else {
+                    alert('文件上传失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('文件上传请求失败');
+            });
+        }
+
+        // 删除文件函数
+        function deleteFile(fileName) {
+            if (!confirm('确定要删除文件吗？')) return;
+
+            fetch(`${API_URL}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: fileName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('文件删除成功！');
+                    loadFileList();
+                } else {
+                    alert('文件删除失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('文件删除请求失败');
+            });
+        }
+
+        // 加载文件列表函数
+        function loadFileList() {
+            fetch(`${API_URL}/files`)
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                if (data.status === 'success' && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const row = document.createElement('tr');
+
+                        row.innerHTML = `
+                            <td>${file.name}</td>
+                            <td>${file.username}</td>
+                            <td>${file.timestamp}</td>
+                            <td>${file.status}</td>
+                            <td>
+                                <button class="delete-btn" onclick="deleteFile('${file.name}')">删除</button>
+                            </td>
+                        `;
+                        fileList.appendChild(row);
+                    });
+                } else {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `<td colspan="5">暂无文件</td>`;
+                    fileList.appendChild(emptyRow);
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('文件列表加载失败');
+            });
+        }
+
+        // 页面加载完毕后，自动加载文件列表
+        window.onload = loadFileList;
+    </script>
+</body>
+</html>

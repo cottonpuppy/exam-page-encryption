@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>试卷管理系统</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            background-image: url('static/loginbgimg.jpg');
+            background-size: cover;
+            background-position: center;
+            font-family: sans-serif;
+        }
+
+
+
+        #content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+        }
+
+        .con {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            padding: 60px 40px;
+            background-color: rgba(255, 255, 255, .8);
+            box-shadow: 0 15px 20px rgba(0, 0, 0, .2);
+            border-radius: 20px;
+            text-align: center;
+            display: none; /* 默认隐藏，切换显示 */
+        }
+
+        .con_title {
+            margin: 0 0 40px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .con_input {
+            position: relative;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .con_input span {
+            display: inline-block;
+            width: 80px;
+        }
+
+        .con_input input {
+            outline: none;
+            height: 32px;
+            padding: 10px;
+            box-sizing: border-box;
+            width: calc(100% - 90px);
+            border: 1px solid rgba(0, 0, 0, .5);
+            background: transparent;
+            font-size: 15px;
+            border-radius: 5px;
+        }
+
+        .con_select {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .con_select select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(0, 0, 0, .5);
+            background: transparent;
+            font-size: 15px;
+            border-radius: 5px;
+        }
+
+        .submit-btn {
+            background-color: #e91e63;
+            color: #fff;
+            border: none;
+            height: 40px;
+            cursor: pointer;
+            vertical-align: middle;
+            text-align: center;
+            width: 100%;
+            border-radius: 5px;
+        }
+
+        .submit-btn:hover {
+            background-color: #0090ff;
+        }
+
+        .submit-btn[disabled] {
+            background-color: #9fa8da;
+            cursor: not-allowed;
+        }
+
+        .toggle-btn {
+            background: none;
+            color: #3f51b5;
+            border: none;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .toggle-btn:hover {
+            color: #0090ff;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div id="content">
+        <!-- 登录部分 -->
+        <div class="con" id="login_form">
+            <div class="con_title">
+                <span>苏科大试卷管理系统</span>
+            </div>
+            <div class="con_panel">
+                <div class="con_input">
+                    <span>用户名：</span>
+                    <input type="text" id="login_username" placeholder="学号/工号" required minlength="3" maxlength="20" />
+                </div>
+                <div class="con_input">
+                    <span>密码：</span>
+                    <input type="password" id="login_password" placeholder="密码" required minlength="6" maxlength="20" />
+                </div>
+                <div class="con_select">
+                    <select id="login_role" required>
+                        <option value="" disabled selected>选择角色</option>
+                        <option value="教师">教师</option>
+                        <option value="主任">主任</option>
+                        <option value="管理员">管理员</option>
+                        <option value="院长">院长</option>
+                        <option value="打印员">打印员</option>
+                    </select>
+                </div>
+                <div class="con_select">
+                    <select id="login_college" required>
+                        <option value="" disabled selected>选择学院</option>
+                        <option value="计算机学院">计算机学院</option>
+                        <option value="管理学院">管理学院</option>
+                        <option value="文学院">文学院</option>
+                        <option value="理学院">国际教育学院</option>
+                    </select>
+                </div>
+                <input type="submit" value="登录" class="submit-btn" onclick="login()" />
+                <button class="toggle-btn" onclick="toggleForms()">没有账号？注册新用户</button>
+            </div>
+        </div>
+
+        <!-- 注册部分 -->
+        <div class="con" id="register_form">
+            <div class="con_title">
+                <span>注册新用户</span>
+            </div>
+            <div class="con_panel">
+                <div class="con_input">
+                    <span>用户名：</span>
+                    <input type="text" id="register_username" placeholder="学号/工号" required minlength="3" maxlength="20" />
+                </div>
+                <div class="con_input">
+                    <span>密码：</span>
+                    <input type="password" id="register_password" placeholder="密码 (至少12位，需包含大小写字母、特殊字符和数字)" required
+                        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])[A-Za-z\d!@#\$%\^&\*]{12,}"
+                        title="密码必须包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符，且长度不低于12位" />
+                </div>
+                <div class="con_input">
+                    <span>确认密码：</span>
+                    <input type="password" id="confirm_password" placeholder="确认密码" required minlength="6" maxlength="20" />
+                </div>
+                <div class="con_select">
+                    <select id="register_role" required>
+                        <option value="" disabled selected>选择角色</option>
+                        <option value="教师">教师</option>
+                        <option value="主任">主任</option>
+                        <option value="院长">院长</option>
+                        <option value="打印员">打印员</option>
+                    </select>
+                </div>
+                <div class="con_select">
+                    <select id="register_college" required>
+                        <option value="" disabled selected>选择学院</option>
+                        <option value="计算机学院">计算机学院</option>
+                        <option value="管理学院">管理学院</option>
+                        <option value="文学院">文学院</option>
+                        <option value="理学院">国际教育学院</option>
+                    </select>
+                </div>
+                <input type="submit" value="注册" class="submit-btn" onclick="register()" />
+                <button class="toggle-btn" onclick="toggleForms()">已有账号？立即登录</button>
+            </div>
+        </div>
+    </div>
+
+   <script>
+    // 默认显示登录表单
+    document.getElementById('login_form').style.display = 'block';
+
+    // 切换表单显示
+    function toggleForms() {
+        const loginForm = document.getElementById('login_form');
+        const registerForm = document.getElementById('register_form');
+
+        if (loginForm.style.display === 'block') {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+        } else {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+        }
+    }
+
+    function login() {
+        const username = document.getElementById('login_username').value.trim();
+        const password = document.getElementById('login_password').value.trim();
+        const role = document.getElementById('login_role').value;
+        const college = document.getElementById('login_college').value;
+
+        if (!username || !password || !role || !college) {
+            alert("请填写所有字段并选择角色和学院");
+            return;
+        }
+
+        const loginButton = document.querySelector('#login_form .submit-btn');
+        loginButton.disabled = true;
+        loginButton.value = '登录中...';
+
+        fetch('https://localhost:8888/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password,
+                role: role,
+                college: college  // 包含学院信息
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(data.message);
+                    document.cookie = `session_id=${data.session_id}; path=/; HttpOnly`; // 设置 session ID cookie
+
+                    // 根据角色重定向到对应页面
+                    if (role === "教师") {
+                        window.location.href = `/teacher`;
+                    } else if (role === "主任") {
+                        window.location.href = `/director`;
+                    } else if (role === "打印员") {
+                        window.location.href = `/printer`;
+                    } else if (role === "管理员") {
+                        window.location.href = `/administrator`;
+                    } else if (role === "院长") {
+                        window.location.href = `/dean`;
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch((error) => {
+                console.error('错误:', error);
+                alert('登录请求失败，请稍后重试。错误详情：' + error.message);
+            })
+            .finally(() => {
+                loginButton.disabled = false;
+                loginButton.value = '登录';
+            });
+    }
+
+    function register() {
+        const username = document.getElementById('register_username').value.trim();
+        const password = document.getElementById('register_password').value.trim();
+        const confirmPassword = document.getElementById('confirm_password').value.trim();
+        const role = document.getElementById('register_role').value;
+        const college = document.getElementById('register_college').value;
+
+        if (!username || !password || !confirmPassword || !role || !college) {
+            alert("请填写所有字段并选择角色和学院");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            alert("两次输入的密码不一致");
+            return;
+        }
+
+        const registerButton = document.querySelector('#register_form .submit-btn');
+        registerButton.disabled = true;
+        registerButton.value = '注册中...';
+
+        fetch('https://localhost:8888/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password,
+                role: role,
+                college: college  // 包含学院信息
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("注册成功，请登录！");
+                    toggleForms(); // 注册成功后自动切换到登录表单
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch((error) => {
+                console.error('错误:', error);
+                alert('注册请求失败，请稍后重试。错误详情：' + error.message);
+            })
+            .finally(() => {
+                registerButton.disabled = false;
+                registerButton.value = '注册';
+            });
+    }
+</script>
+
+</body>
+
+</html>

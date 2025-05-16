@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>院长管理界面</title>
+    <style>
+        /* 样式定义 */
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        #header { background-color: #3f51b5; color: #fff; padding: 20px; text-align: center; }
+        .header_title { font-size: 24px; }
+        #content { padding: 20px; }
+        .section { display: none; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .btn { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+        .toggle-view-btn { margin-bottom: 10px; background-color: #607d8b; }
+        .approve-btn { background-color: #4caf50; }
+        .approve-btn:hover { background-color: #388e3c; }
+        .toggle-btn { background-color: #2196f3; }
+        .toggle-btn.revoke { background-color: #f44336; }
+        .toggle-btn:hover { opacity: 0.8; }
+        .success, .error { margin-top: 10px; padding: 10px; border-radius: 5px; display: none; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="header_title">院长管理界面</div>
+    </div>
+
+    <div id="content">
+        <!-- 切换视图按钮 -->
+        <button class="btn toggle-view-btn" onclick="toggleView()">用户权限管理</button>
+
+        <!-- 文件审核部分 -->
+        <div class="section" id="fileSection" style="display: block;">
+            <h2>文件审核管理</h2>
+            <button onclick="loadFiles()">刷新文件数据</button>
+            <div id="fileError" class="error">文件加载失败</div>
+            <div id="fileSuccess" class="success">操作成功</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>上传者</th>
+                        <th>上传时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList"></tbody>
+            </table>
+        </div>
+
+        <!-- 用户权限管理部分 -->
+        <div class="section" id="userSection">
+            <h2>用户权限管理</h2>
+            <button onclick="loadUsers()">刷新用户数据</button>
+            <div id="userError" class="error">用户数据加载失败</div>
+            <div id="userSuccess" class="success">权限更新成功</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>学院</th>
+                        <th>上传权限</th>
+                        <th>下载权限</th>
+                        <th>审核权限</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://localhost:8888';
+
+        // 切换视图：在文件审核和用户权限管理之间切换
+        function toggleView() {
+            const fileSection = document.getElementById('fileSection');
+            const userSection = document.getElementById('userSection');
+            const toggleBtn = document.querySelector('.toggle-view-btn');
+
+            if (fileSection.style.display === 'block') {
+                fileSection.style.display = 'none';
+                userSection.style.display = 'block';
+                toggleBtn.textContent = '文件审核管理';
+            } else {
+                userSection.style.display = 'none';
+                fileSection.style.display = 'block';
+                toggleBtn.textContent = '用户权限管理';
+            }
+        }
+
+        // 加载文件列表并显示在页面上
+        function loadFiles() {
+            fetch(`${API_URL}/dean/reviewed_files`)
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                if (data.status === 'success' && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const row = document.createElement('tr');
+                        const toggleAction = file.status === '主任已审核' ? '通过审核' : '撤销审核';
+                        row.innerHTML = `
+                            <td>${file.name}</td>
+                            <td>${file.username}</td>
+                            <td>${file.timestamp}</td>
+                            <td>${file.status}</td>
+                            <td><button class="btn approve-btn" onclick="toggleFileApproval('${file.id}', '${file.status}')">${toggleAction}</button></td>
+                        `;
+                        fileList.appendChild(row);
+                    });
+                } else {
+                    fileList.innerHTML = '<tr><td colspan="5">暂无文件</td></tr>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('fileError').style.display = 'block';
+                console.error('Error loading files:', error);
+            });
+        }
+
+        // 切换文件审核状态
+       function toggleFileApproval(fileId, currentStatus) {
+            const newStatus = currentStatus === '院长已审核' ? '主任已审核' : '院长已审核';
+
+            fetch(`${API_URL}/files/${fileId}/review`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadFiles(); // 刷新文件列表，显示最新状态
+                    const successMessage = document.getElementById('fileSuccess');
+                    successMessage.textContent = `文件状态已更新为: ${newStatus}`;
+                    successMessage.style.display = 'block';
+
+                    const errorMessage = document.getElementById('fileError');
+                    errorMessage.style.display = 'none';
+                } else {
+                    const errorMessage = document.getElementById('fileError');
+                    errorMessage.textContent = data.message;
+                    errorMessage.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling file approval status:', error);
+                const errorMessage = document.getElementById('fileError');
+                errorMessage.textContent = '切换文件状态失败，请稍后重试。';
+                errorMessage.style.display = 'block';
+            });
+}
+        // 加载用户数据
+        function loadUsers() {
+            fetch(`${API_URL}/dean/users`)
+            .then(response => response.json())
+            .then(data => {
+                const userList = document.getElementById('userList');
+                userList.innerHTML = '';
+
+                if (data.status === 'success' && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.username}</td>
+                            <td>${user.college}</td>
+                            <td>${user.can_upload ? '是' : '否'}</td>
+                            <td>${user.can_download ? '是' : '否'}</td>
+                            <td>${user.can_review ? '是' : '否'}</td>
+                            <td>
+                                ${generatePermissionButton(user.username, 'can_upload', user.can_upload)}
+                                ${generatePermissionButton(user.username, 'can_download', user.can_download)}
+                                ${generatePermissionButton(user.username, 'can_review', user.can_review)}
+                            </td>
+                        `;
+                        userList.appendChild(row);
+                    });
+                } else {
+                    userList.innerHTML = '<tr><td colspan="6">暂无用户数据</td></tr>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('userError').style.display = 'block';
+                console.error('Error loading users:', error);
+            });
+        }
+
+        // 生成权限切换按钮
+        function generatePermissionButton(username, permissionType, currentState) {
+            const action = currentState ? '取消' : '授权';
+            return `<button class="btn toggle-btn ${currentState ? 'revoke' : ''}" onclick="togglePermission('${username}', '${permissionType}', ${!currentState})">${action + permissionType}</button>`;
+        }
+
+        // 切换用户权限
+        function togglePermission(username, permissionType, enable) {
+            fetch(`${API_URL}/users/${username}/permissions`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ [permissionType]: enable ? 1 : 0 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadUsers();
+                    document.getElementById('userSuccess').style.display = 'block';
+                    document.getElementById('userSuccess').textContent = `权限更新成功：${username} 的 ${permissionType} 权限已${enable ? '授权' : '取消'}`;
+                } else {
+                    document.getElementById('userError').textContent = data.message;
+                    document.getElementById('userError').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error updating permission:', error);
+                document.getElementById('userError').style.display = 'block';
+            });
+        }
+
+        // 页面加载时自动加载文件和用户数据
+        window.onload = function() {
+            loadFiles();
+            loadUsers();
+        };
+    </script>
+</body>
+</html>

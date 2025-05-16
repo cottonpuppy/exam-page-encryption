@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主任管理页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        #header {
+            background-color: #3f51b5;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header_title {
+            font-size: 24px;
+        }
+        #content {
+            padding: 20px;
+        }
+        .file-list-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .file-list-section table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .file-list-section table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        .review-btn {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .review-btn.reviewed {
+            background-color: #bbb;
+            cursor: default;
+        }
+        .review-btn:not(.reviewed):hover {
+            background-color: #388e3c;
+        }
+        .preview-btn {
+            background-color: #2196f3;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .preview-btn:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="header_title">
+            <span>主任管理页面</span>
+        </div>
+    </div>
+
+    <div id="content">
+        <!-- 文件列表部分 -->
+        <div class="file-list-section">
+            <h2>文件列表</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>上传者</th>
+                        <th>上传时间</th>
+                        <th>预览</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList">
+                    <!-- 文件列表将动态添加 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://localhost:8888';
+
+        // 加载文件列表函数
+        function loadFileList() {
+            fetch(`${API_URL}/unreviewed_files`)
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                if (data.status === 'success' && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const row = document.createElement('tr');
+
+                        const fileNameCell = document.createElement('td');
+                        fileNameCell.textContent = file.name;
+                        row.appendChild(fileNameCell);
+
+                        const uploaderCell = document.createElement('td');
+                        uploaderCell.textContent = file.username;
+                        row.appendChild(uploaderCell);
+
+                        const timestampCell = document.createElement('td');
+                        timestampCell.textContent = file.timestamp;
+                        row.appendChild(timestampCell);
+
+                        // 预览按钮
+                        const previewCell = document.createElement('td');
+                        const previewButton = document.createElement('button');
+                        previewButton.textContent = '预览';
+                        previewButton.className = 'preview-btn';
+                        previewButton.onclick = () => previewFile(file.name);  // 预览文件内容
+                        previewCell.appendChild(previewButton);
+                        row.appendChild(previewCell);
+
+                        // 审核按钮
+                        const actionsCell = document.createElement('td');
+                        const reviewButton = document.createElement('button');
+                        reviewButton.textContent = file.status === '未审核' ? '审核' : '已审核';
+                        reviewButton.className = 'review-btn';
+                        if (file.status === '已审核') reviewButton.classList.add('reviewed');
+                        reviewButton.onclick = () => toggleReviewStatus(file.name, reviewButton);
+                        actionsCell.appendChild(reviewButton);
+                        row.appendChild(actionsCell);
+
+                        fileList.appendChild(row);
+                    });
+                } else {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 5;
+                    emptyCell.textContent = '暂无文件';
+                    emptyRow.appendChild(emptyCell);
+                    fileList.appendChild(emptyRow);
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('文件列表加载失败');
+            });
+        }
+
+        // 预览文件内容
+        function previewFile(fileName) {
+            const previewUrl = `${API_URL}/fileContent?filename=${encodeURIComponent(fileName)}`;
+            window.open(previewUrl, '_blank');  // 在新标签页中打开文件内容
+        }
+
+        // 审核文件函数（支持状态切换）
+        function toggleReviewStatus(fileName, reviewButton) {
+            const currentStatus = reviewButton.textContent === '审核' ? '未审核' : '已审核';
+
+            // 发送审核状态更新请求
+            fetch(`${API_URL}/review`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filename: fileName, current_status: currentStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 切换状态
+                    reviewButton.textContent = currentStatus === '未审核' ? '已审核' : '审核';
+                    reviewButton.classList.toggle('reviewed');  // 切换样式
+                } else {
+                    alert('文件审核失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('文件审核请求失败');
+            });
+        }
+
+        // 页面加载完毕后，自动加载文件列表
+        window.onload = loadFileList;
+    </script>
+</body>
+</html>
